@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ÑOKI 🎮</title>
+ 
+<style>
+body{
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  height:100vh;
+  overflow:hidden;
+  font-family:Arial;
+  background:#000;
+  color:white;
+}
+ 
+h1{
+  font-size:28px;
+  margin:10px;
+}
+ 
+#menu{
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  gap:10px;
+  max-width:340px;
+}
+ 
+.card{
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+  width:140px;
+  cursor:pointer;
+  text-align:center;
+}
+ 
+#gameContainer{
+  display:none;
+  width:100%;
+  max-width:340px;
+}
+ 
+canvas{
+  width:100%;
+  height:auto;
+  background:black;
+  border:2px solid cyan;
+}
+ 
+button{
+  margin:5px;
+}
+</style>
+</head>
+ 
+<body>
+ 
+<h1>🎮 ÑOKI</h1>
+ 
+<div id="menu">
+<div class="card" onclick="startGame('snake')">🐍 Snake</div>
+<div class="card" onclick="startGame('dodge')">⚡ Dodge</div>
+<div class="card" onclick="startGame('football')">⚽ Fútbol</div>
+</div>
+ 
+<div id="gameContainer">
+<button onclick="goBack()">⬅ Volver</button>
+<h2 id="gameTitle"></h2>
+<canvas id="game" width="320" height="200"></canvas>
+</div>
+ 
+<script>
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const menu=document.getElementById("menu");
+const gameContainer=document.getElementById("gameContainer");
+const title=document.getElementById("gameTitle");
+ 
+const SIZE=12;
+ 
+let animation;
+let keyHandler=null;
+ 
+function setControls(fn){
+  if(keyHandler) document.removeEventListener("keydown",keyHandler);
+  keyHandler=fn;
+  document.addEventListener("keydown",keyHandler);
+}
+ 
+function startGame(g){
+  cancelAnimationFrame(animation);
+  menu.style.display="none";
+  gameContainer.style.display="block";
+ 
+  if(g==="snake") snake();
+  if(g==="dodge") dodge();
+  if(g==="football") football();
+}
+ 
+function goBack(){
+  cancelAnimationFrame(animation);
+  if(keyHandler) document.removeEventListener("keydown",keyHandler);
+  gameContainer.style.display="none";
+  menu.style.display="flex";
+}
+ 
+function rect(x,y,w,h,color){
+  ctx.fillStyle=color;
+  ctx.fillRect(x,y,w,h);
+}
+ 
+/* ===== SNAKE ===== */
+function snake(){
+  title.textContent="🐍 Snake";
+ 
+  let s=[{x:5,y:5}], dir="RIGHT";
+  let food={x:10,y:10}, score=0;
+ 
+  setControls(e=>{
+    if(e.key==="ArrowUp" && dir!=="DOWN") dir="UP";
+    if(e.key==="ArrowDown" && dir!=="UP") dir="DOWN";
+    if(e.key==="ArrowLeft" && dir!=="RIGHT") dir="LEFT";
+    if(e.key==="ArrowRight" && dir!=="LEFT") dir="RIGHT";
+  });
+ 
+  function loop(){
+    let head={...s[0]};
+    if(dir==="UP") head.y--;
+    if(dir==="DOWN") head.y++;
+    if(dir==="LEFT") head.x--;
+    if(dir==="RIGHT") head.x++;
+ 
+    if(head.x<0||head.y<0||head.x>=26||head.y>=16 ||
+       s.some(p=>p.x===head.x&&p.y===head.y)){
+      alert("Game Over: "+score);
+      goBack();
+      return;
+    }
+ 
+    s.unshift(head);
+ 
+    if(head.x===food.x && head.y===food.y){
+      score++;
+      food={x:Math.floor(Math.random()*26),y:Math.floor(Math.random()*16)};
+    } else s.pop();
+ 
+    ctx.clearRect(0,0,320,200);
+    s.forEach(p=>rect(p.x*SIZE,p.y*SIZE,SIZE,SIZE,"lime"));
+    rect(food.x*SIZE,food.y*SIZE,SIZE,SIZE,"red");
+ 
+    ctx.fillStyle="white";
+    ctx.fillText("Score: "+score,5,10);
+ 
+    animation=requestAnimationFrame(loop);
+  }
+  loop();
+}
+ 
+/* ===== DODGE ===== */
+function dodge(){
+  title.textContent="⚡ Dodge";
+ 
+  let player={x:150,y:170};
+  let enemies=[], score=0;
+ 
+  setControls(e=>{
+    if(e.key==="ArrowLeft") player.x-=10;
+    if(e.key==="ArrowRight") player.x+=10;
+  });
+ 
+  function loop(){
+    if(Math.random()<0.04){
+      enemies.push({x:Math.random()*300,y:0});
+    }
+ 
+    ctx.clearRect(0,0,320,200);
+ 
+    rect(player.x,player.y,10,10,"lime");
+ 
+    enemies.forEach(e=>{
+      e.y+=3;
+      rect(e.x,e.y,10,10,"red");
+ 
+      if(e.x<player.x+10 && e.x+10>player.x &&
+         e.y<player.y+10 && e.y+10>player.y){
+        alert("Game Over: "+score);
+        goBack();
+        return;
+      }
+    });
+ 
+    enemies=enemies.filter(e=>e.y<200);
+    score++;
+ 
+    ctx.fillStyle="white";
+    ctx.fillText("Score: "+score,5,10);
+ 
+    animation=requestAnimationFrame(loop);
+  }
+  loop();
+}
+ 
+/* ===== FUTBOL ===== */
+function football(){
+  title.textContent="⚽ Fútbol";
+ 
+  let playerY=80;
+  let enemyY=80;
+ 
+  let ball={x:160,y:100,dx:3,dy:2};
+ 
+  let pScore=0, eScore=0;
+ 
+  setControls(e=>{
+    if(e.key==="ArrowUp") playerY-=10;
+    if(e.key==="ArrowDown") playerY+=10;
+  });
+ 
+  function loop(){
+    ctx.clearRect(0,0,320,200);
+ 
+    rect(5,playerY,5,40,"lime");
+ 
+    if(ball.y>enemyY) enemyY+=2;
+    else enemyY-=2;
+    rect(310,enemyY,5,40,"red");
+ 
+    ball.x+=ball.dx;
+    ball.y+=ball.dy;
+ 
+    if(ball.y<=0||ball.y>=200) ball.dy*=-1;
+ 
+    if(ball.x<10 && ball.y>playerY && ball.y<playerY+40){
+      ball.dx*=-1;
+    }
+ 
+    if(ball.x>300 && ball.y>enemyY && ball.y<enemyY+40){
+      ball.dx*=-1;
+    }
+ 
+    if(ball.x<0){ eScore++; reset(); }
+    if(ball.x>320){ pScore++; reset(); }
+ 
+    rect(ball.x,ball.y,6,6,"white");
+ 
+    ctx.fillText(pScore+"-"+eScore,140,10);
+ 
+    animation=requestAnimationFrame(loop);
+  }
+ 
+  function reset(){
+    ball={x:160,y:100,dx:3,dy:2};
+  }
+ 
+  loop();
+}
+</script>
+ 
+</body>
+</html>
